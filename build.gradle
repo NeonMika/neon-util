@@ -3,6 +3,7 @@ import org.gradle.internal.jvm.Jvm
 plugins {
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version '1.7.10'
+    id 'maven-publish'
 }
 
 def configurationJvm = Jvm.current()
@@ -104,4 +105,21 @@ test {
         def testJavaHome = System.getProperty('java.home')
         println("java.home while testing: " + testJavaHome)
     }
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+publish {
+
 }
