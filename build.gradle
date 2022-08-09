@@ -1,0 +1,107 @@
+import org.gradle.internal.jvm.Jvm
+
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.10'
+}
+
+def configurationJvm = Jvm.current()
+println("Java used for Gradle configuration (Jvm.current()): " + configurationJvm)
+
+def configurationJavaHome = System.getProperty('java.home')
+println("java.home during Gradle configuration: " + configurationJavaHome)
+
+version '0.0.1'
+group 'neon'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // # JUnit
+    testImplementation group: 'junit', name: 'junit', version: '4.13.1'
+}
+
+// distTar.enabled = false
+
+// Both apply to Java as well as Kotlin
+// https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support: "Note that setting a toolchain via the kotlin extension will update the toolchain for Java compile
+// tasks as well."
+/*java { // This should work too, but we follow the example given in the link
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(10)
+    }
+}*/
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(10))
+    }
+}
+// for task runJar
+tasks.withType(JavaExec).configureEach {
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
+
+
+jar {
+    manifest {
+        attributes(
+                'Version': project.version,
+                'Class-Path': (configurations.runtimeClasspath.files).toSet().collect { it.getName() }.join(' ')
+                // "Main-Class": application.mainClass == null ? "" : application.mainClass
+        )
+    }
+}
+
+task copyRuntimeClasspathToLib(type: Copy) {
+    doFirst {
+        println "copyRuntimeClasspathToLib:"
+        println "copy project.configurations.runtimeClasspath.files -> buildDir\\libs"
+        println "[${project.configurations.runtimeClasspath.files.collect { it.getName() }.join(', ')}] -> $buildDir\\libs"
+    }
+    into "$buildDir/libs"
+    from project.configurations.runtimeClasspath
+}
+
+// creates zip in ./build/distributions
+task zipLibs(type: Zip) {
+    dependsOn('build')
+    dependsOn('copyRuntimeClasspathToLib')
+    from("$buildDir/libs") {
+        into(".")
+    }
+}
+
+build {
+    dependsOn(copyRuntimeClasspathToLib)
+    doFirst {
+        println "Java used for building (Toolchain specification): " + java.toolchain.displayName
+        JavaCompiler compiler = javaToolchains.compilerFor(java.toolchain).get()
+        println "Java used for building (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+        println "Java used for building (Compiler - Installation path): ${compiler.metadata.installationPath}"
+        println "Java used for building (Compiler - Executable path): " + compiler.executablePath
+
+        def buildJvm = Jvm.current()
+        println("Jvm.current() while building: " + buildJvm)
+
+        def buildJavaHome = System.getProperty('java.home')
+        println("java.home while building: " + buildJavaHome)
+    }
+}
+
+test {
+    doFirst {
+        println "Java used for testing (Toolchain specification): " + java.toolchain.displayName
+        JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
+        println "Java used for testing (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+        println "Java used for testing (Compiler - Installation path): ${compiler.metadata.installationPath}"
+        println "Java used for testing (Compiler - Executable path): " + compiler.executablePath
+
+        def testJvm = Jvm.current()
+        println("Jvm.current() while testing: " + testJvm)
+
+        def testJavaHome = System.getProperty('java.home')
+        println("java.home while testing: " + testJavaHome)
+    }
+}
