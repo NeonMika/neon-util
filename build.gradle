@@ -12,7 +12,7 @@ println("Java used for Gradle configuration (Jvm.current()): " + configurationJv
 def configurationJavaHome = System.getProperty('java.home')
 println("java.home during Gradle configuration: " + configurationJavaHome)
 
-version '0.0.1'
+version '0.0.2'
 group 'neon'
 
 repositories {
@@ -24,92 +24,143 @@ dependencies {
     testImplementation group: 'junit', name: 'junit', version: '4.13.1'
 }
 
-// distTar.enabled = false
+// This is executed on all subprojects
+allprojects {
+    // This is executed on all subprojects that use the NodeJS plugin (https://github.com/node-gradle/gradle-node-plugin - npm_<...> (e.g., npm_install))
+    plugins.withId('com.github.node-gradle.node') {
+        node {
+            download = true
+        }
 
-// Both apply to Java as well as Kotlin
-// https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support: "Note that setting a toolchain via the kotlin extension will update the toolchain for Java compile
-// tasks as well."
-/*java { // This should work too, but we follow the example given in the link
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(10)
+        build {
+            dependsOn("npmInstall")
+        }
     }
-}*/
-kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(10))
+
+    // This is executed on all subprojects that use the application plugin (https://docs.gradle.org/current/userguide/application_plugin.html - run, startScripts, installDist,
+    // distZip, distTar)
+    plugins.withId('application') {
+        // Both apply to Java as well as Kotlin
+        // https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support: "Note that setting a toolchain via the kotlin extension will update the toolchain for Java compile
+        // tasks as well."
+        java { // This should work too, but we follow the example given in the link
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(10)
+            }
+            withSourcesJar()
+            withJavadocJar()
+        }
+
+        tasks.register('copyRuntimeLibrariesToLib', Copy) {
+            doFirst {
+                println "copyRuntimeClasspathToLib:"
+                println "copy project.configurations.runtimeClasspath.files -> buildDir\\libs"
+                println "[${project.configurations.runtimeClasspath.files.collect { it.getName() }.join(', ')}] -> $buildDir\\libs"
+            }
+            into "$buildDir/libs"
+            from project.configurations.runtimeClasspath
+            exclude "tools.jar"
+        }
+
+        build {
+            dependsOn('copyRuntimeLibrariesToLib')
+            doFirst {
+                println "Java used for building (Toolchain specification): " + java.toolchain.displayName
+                JavaCompiler compiler = javaToolchains.compilerFor(java.toolchain).get()
+                println "Java used for building (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+                println "Java used for building (Compiler - Installation path): ${compiler.metadata.installationPath}"
+                println "Java used for building (Compiler - Executable path): " + compiler.executablePath
+            }
+        }
+
+        tasks.register('jarSettings') {
+            doFirst {
+                println("Main-Class: " + application.mainClass.get())
+                println("Class-Path: " + configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '))
+                println("Version: " + project.version)
+                jar {
+                    manifest {
+                        attributes(
+                                "Main-Class": application.mainClass.get(),
+                                'Class-Path': configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '),
+                                'Version': project.version
+                        )
+                    }
+                }
+            }
+        }
+        jar {
+            dependsOn('jarSettings')
+        }
+
+        run {
+            doFirst {
+                println "Java used for running (Toolchain specification): " + java.toolchain.displayName
+                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
+                println "Java used for running (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+                println "Java used for running (Compiler - Installation path): ${compiler.metadata.installationPath}"
+                println "Java used for running (Compiler - Executable path): " + compiler.executablePath
+            }
+        }
+
+        // for task runJar
+        tasks.withType(JavaExec).configureEach {
+            javaLauncher = javaToolchains.launcherFor(java.toolchain)
+        }
+        tasks.register('runJar', JavaExec) {
+            doFirst {
+                println "Java used for running jar (Toolchain specification): " + java.toolchain.displayName
+                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
+                println "Java used for running jar (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+                println "Java used for running jar (Compiler - Installation path): ${compiler.metadata.installationPath}"
+                println "Java used for running jar (Compiler - Executable path): " + compiler.executablePath
+                println "Jar location: " + jar.archiveFile.get().asFile.absolutePath
+            }
+            classpath = files(jar.archiveFile)
+            ignoreExitValue = true
+            // classpath += sourceSets.main.runtimeClasspath // not needed since it is specified in the jar manifest
+            // main = full.package.classname // not needed since it is specified in the jar manifest
+        }
+
+        // specify that all files from the dist and out folder should be zipped
+        distZip {
+            dependsOn('copyRuntimeLibrariesToLib')
+            from("$projectDir\\out")
+            from("$projectDir\\dist")
+            archiveFileName = "dist.zip"
+            destinationDirectory = file("$projectDir")
+        }
+        distTar.enabled = false
+
+        test {
+            doFirst {
+                println "Java used for testing (Toolchain specification): " + java.toolchain.displayName
+                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
+                println "Java used for testing (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+                println "Java used for testing (Compiler - Installation path): ${compiler.metadata.installationPath}"
+                println "Java used for testing (Compiler - Executable path): " + compiler.executablePath
+
+                def testJvm = Jvm.current()
+                println("Jvm.current() while testing: " + testJvm)
+
+                def testJavaHome = System.getProperty('java.home')
+                println("java.home while testing: " + testJavaHome)
+            }
+        }
     }
-}
-// for task runJar
-tasks.withType(JavaExec).configureEach {
-    javaLauncher = javaToolchains.launcherFor(java.toolchain)
-}
 
-
-jar {
-    manifest {
-        attributes(
-                'Version': project.version,
-                'Class-Path': (configurations.runtimeClasspath.files).toSet().collect { it.getName() }.join(' ')
-                // "Main-Class": application.mainClass == null ? "" : application.mainClass
-        )
+    // This is executed on all subprojects that use the base plugin (https://docs.gradle.org/current/userguide/base_plugin.html - clean, check, assemble, build,
+    // build<Configuration>, clean<Task>)
+    plugins.withId("base") {
+        // Extended clean
+        clean.doFirst {
+            // group 'Build'
+            // description 'Deletes the project\'s out and dist folder, as well as dist.zip'
+            delete "$projectDir\\out"
+            delete "$projectDir\\dist"
+            delete "$projectDir\\dist.zip"
+        }
     }
-}
-
-task copyRuntimeClasspathToLib(type: Copy) {
-    doFirst {
-        println "copyRuntimeClasspathToLib:"
-        println "copy project.configurations.runtimeClasspath.files -> buildDir\\libs"
-        println "[${project.configurations.runtimeClasspath.files.collect { it.getName() }.join(', ')}] -> $buildDir\\libs"
-    }
-    into "$buildDir/libs"
-    from project.configurations.runtimeClasspath
-}
-
-// creates zip in ./build/distributions
-task zipLibs(type: Zip) {
-    dependsOn('build')
-    dependsOn('copyRuntimeClasspathToLib')
-    from("$buildDir/libs") {
-        into(".")
-    }
-}
-
-build {
-    dependsOn(copyRuntimeClasspathToLib)
-    doFirst {
-        println "Java used for building (Toolchain specification): " + java.toolchain.displayName
-        JavaCompiler compiler = javaToolchains.compilerFor(java.toolchain).get()
-        println "Java used for building (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-        println "Java used for building (Compiler - Installation path): ${compiler.metadata.installationPath}"
-        println "Java used for building (Compiler - Executable path): " + compiler.executablePath
-
-        def buildJvm = Jvm.current()
-        println("Jvm.current() while building: " + buildJvm)
-
-        def buildJavaHome = System.getProperty('java.home')
-        println("java.home while building: " + buildJavaHome)
-    }
-}
-
-test {
-    doFirst {
-        println "Java used for testing (Toolchain specification): " + java.toolchain.displayName
-        JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
-        println "Java used for testing (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-        println "Java used for testing (Compiler - Installation path): ${compiler.metadata.installationPath}"
-        println "Java used for testing (Compiler - Executable path): " + compiler.executablePath
-
-        def testJvm = Jvm.current()
-        println("Jvm.current() while testing: " + testJvm)
-
-        def testJavaHome = System.getProperty('java.home')
-        println("java.home while testing: " + testJavaHome)
-    }
-}
-
-java {
-    withSourcesJar()
-    withJavadocJar()
 }
 
 publishing {
@@ -118,8 +169,4 @@ publishing {
             from components.java
         }
     }
-}
-
-publish {
-
 }
