@@ -37,9 +37,7 @@ allprojects {
         }
     }
 
-    // This is executed on all subprojects that use the application plugin (https://docs.gradle.org/current/userguide/application_plugin.html - run, startScripts, installDist,
-    // distZip, distTar)
-    plugins.withId('application') {
+    plugins.withId('java') {
         // Both apply to Java as well as Kotlin
         // https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support: "Note that setting a toolchain via the kotlin extension will update the toolchain for Java compile
         // tasks as well."
@@ -50,7 +48,7 @@ allprojects {
             withSourcesJar()
             withJavadocJar()
         }
-
+        
         tasks.register('copyRuntimeLibrariesToLib', Copy) {
             doFirst {
                 println "copyRuntimeClasspathToLib:"
@@ -75,13 +73,11 @@ allprojects {
 
         tasks.register('jarSettings') {
             doFirst {
-                println("Main-Class: " + application.mainClass.get())
                 println("Class-Path: " + configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '))
                 println("Version: " + project.version)
                 jar {
                     manifest {
                         attributes(
-                                "Main-Class": application.mainClass.get(),
                                 'Class-Path': configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '),
                                 'Version': project.version
                         )
@@ -92,45 +88,6 @@ allprojects {
         jar {
             dependsOn('jarSettings')
         }
-
-        run {
-            doFirst {
-                println "Java used for running (Toolchain specification): " + java.toolchain.displayName
-                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
-                println "Java used for running (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-                println "Java used for running (Compiler - Installation path): ${compiler.metadata.installationPath}"
-                println "Java used for running (Compiler - Executable path): " + compiler.executablePath
-            }
-        }
-
-        // for task runJar
-        tasks.withType(JavaExec).configureEach {
-            javaLauncher = javaToolchains.launcherFor(java.toolchain)
-        }
-        tasks.register('runJar', JavaExec) {
-            doFirst {
-                println "Java used for running jar (Toolchain specification): " + java.toolchain.displayName
-                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
-                println "Java used for running jar (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-                println "Java used for running jar (Compiler - Installation path): ${compiler.metadata.installationPath}"
-                println "Java used for running jar (Compiler - Executable path): " + compiler.executablePath
-                println "Jar location: " + jar.archiveFile.get().asFile.absolutePath
-            }
-            classpath = files(jar.archiveFile)
-            ignoreExitValue = true
-            // classpath += sourceSets.main.runtimeClasspath // not needed since it is specified in the jar manifest
-            // main = full.package.classname // not needed since it is specified in the jar manifest
-        }
-
-        // specify that all files from the dist and out folder should be zipped
-        distZip {
-            dependsOn('copyRuntimeLibrariesToLib')
-            from("$projectDir\\out")
-            from("$projectDir\\dist")
-            archiveFileName = "dist.zip"
-            destinationDirectory = file("$projectDir")
-        }
-        distTar.enabled = false
 
         test {
             doFirst {
@@ -145,6 +102,46 @@ allprojects {
 
                 def testJavaHome = System.getProperty('java.home')
                 println("java.home while testing: " + testJavaHome)
+            }
+        }
+    }
+    
+    // This is executed on all subprojects that use the application plugin (https://docs.gradle.org/current/userguide/application_plugin.html - run, startScripts, installDist,
+    // distZip, distTar)
+    plugins.withId('application') {
+        tasks.register('jarMainClass') {
+            doFirst {
+                println("Main-Class: " + application.mainClass.get())
+                jar {
+                    manifest {
+                        attributes(
+                                "Main-Class": application.mainClass.get(),
+                        )
+                    }
+                }
+            }
+        }
+        jar {
+            dependsOn('jarMainClass')
+        }
+
+        // specify that all files from the dist and out folder should be zipped
+        distZip {
+            dependsOn('copyRuntimeLibrariesToLib')
+            from("$projectDir\\out")
+            from("$projectDir\\dist")
+            archiveFileName = "dist.zip"
+            destinationDirectory = file("$projectDir")
+        }
+        distTar.enabled = false
+
+        run {
+            doFirst {
+                println "Java used for running (Toolchain specification): " + java.toolchain.displayName
+                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
+                println "Java used for running (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
+                println "Java used for running (Compiler - Installation path): ${compiler.metadata.installationPath}"
+                println "Java used for running (Compiler - Executable path): " + compiler.executablePath
             }
         }
     }
