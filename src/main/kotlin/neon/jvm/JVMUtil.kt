@@ -61,7 +61,7 @@ fun printJavaInformation() {
     println("JDI information:")
     println()
     println("Virtual Machine Manager Major Interface Version: ${Bootstrap.virtualMachineManager().majorInterfaceVersion()}")
-    println("Virtual Machine Manager Major Interface Version: ${Bootstrap.virtualMachineManager().minorInterfaceVersion()}")
+    println("Virtual Machine Manager Minor Interface Version: ${Bootstrap.virtualMachineManager().minorInterfaceVersion()}")
     printDebuggerVersionByConnecting()
     println("==================================")
     println()
