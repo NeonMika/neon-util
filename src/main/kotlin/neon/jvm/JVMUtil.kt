@@ -23,8 +23,12 @@ internal fun printDebuggerVersionByConnecting() {
 fun printJavaInformation() {
     val runtime = ManagementFactory.getRuntimeMXBean()
 
+
     fun Set<*>.joinToListString() = joinToString("\n") { "  - $it" }
     fun List<*>.joinToListString() = joinToString("\n") { "  - $it" }
+
+    fun String.splitPaths() = replace(":\\", "####").replace(":",";").replace("####", ":\\").split(";")
+
     println()
     println("|==================================|")
     println("|======== JAVA INFORMATION ========|")
@@ -36,12 +40,12 @@ fun printJavaInformation() {
     println("System properties:\n${runtime.systemProperties.entries.joinToListString()}")
     println()
     // println("pid: ${runtime.pid}") // since Java 10
-    println("Classpath:\n${runtime.classPath.split(";", ":").joinToListString()}")
-    println("Library path:\n${runtime.libraryPath.split(";", ":").joinToListString()}")
+    println("Classpath:\n${runtime.classPath.splitPaths().joinToListString()}")
+    println("Library path:\n${runtime.libraryPath.splitPaths().joinToListString()}")
     println("isBootClassPathSupported:\n ${runtime.isBootClassPathSupported}")
     if (runtime.isBootClassPathSupported) println(
         "Boot Classpath:\n${
-            runtime.bootClassPath.split(";", ":").joinToListString()
+            runtime.bootClassPath.splitPaths().joinToListString()
         }}"
     )
     println()

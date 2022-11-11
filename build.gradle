@@ -12,7 +12,7 @@ println("Java used for Gradle configuration (Jvm.current()): " + configurationJv
 def configurationJavaHome = System.getProperty('java.home')
 println("java.home during Gradle configuration: " + configurationJavaHome)
 
-version '0.0.4'
+version '0.0.5'
 group 'neon'
 
 repositories {
