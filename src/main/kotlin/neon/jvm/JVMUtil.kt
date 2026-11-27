@@ -3,6 +3,7 @@ package neon.jvm
 import com.sun.jdi.Bootstrap
 import java.io.File
 import java.lang.management.ManagementFactory
+import java.lang.management.MemoryUsage
 import java.time.Duration
 import java.time.Instant
 import javax.tools.ToolProvider
@@ -64,6 +65,7 @@ fun printJavaInformation() {
     println("VM vendor:\n  ${runtime.vmVendor}")
     println("VM version:\n  ${runtime.vmVersion}")
     printOperatingSystemInformation()
+    printMemoryInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -126,4 +128,20 @@ private fun printOperatingSystemInformation() {
     if (os is com.sun.management.UnixOperatingSystemMXBean) {
         printValue("Open file descriptors", "${os.openFileDescriptorCount} (max: ${os.maxFileDescriptorCount})")
     }
+}
+
+private fun MemoryUsage.toListString() = listOf(
+    "init: ${init.formatBytes()}",
+    "used: ${used.formatBytes()}",
+    "committed: ${committed.formatBytes()}",
+    "max: ${max.formatBytes()}"
+).joinToString("\n") { "  - $it" }
+
+private fun printMemoryInformation() {
+    val memory = ManagementFactory.getMemoryMXBean()
+    printSectionHeader("Memory information")
+    println("Heap memory usage:\n${memory.heapMemoryUsage.toListString()}")
+    println("Non-heap memory usage:\n${memory.nonHeapMemoryUsage.toListString()}")
+    @Suppress("DEPRECATION")
+    printValue("Objects pending finalization", memory.objectPendingFinalizationCount)
 }
