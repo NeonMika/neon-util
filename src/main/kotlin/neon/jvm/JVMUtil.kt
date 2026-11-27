@@ -69,6 +69,7 @@ fun printJavaInformation() {
     println("VM Name:\n  ${runtime.vmName}")
     println("VM vendor:\n  ${runtime.vmVendor}")
     println("VM version:\n  ${runtime.vmVersion}")
+    println("VM info (execution mode, class data sharing):\n  ${System.getProperty("java.vm.info")}")
     printOperatingSystemInformation()
     printMemoryInformation()
     printMemoryPoolInformation()
