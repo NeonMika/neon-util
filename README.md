@@ -66,7 +66,7 @@ dependencies {
 </dependency>
 ```
 
-Replace the version placeholder with a release tag (e.g. `v0.0.5`), a commit hash, or `main-SNAPSHOT`.
+Replace the version placeholder with a release tag (e.g. `v0.0.7`), a commit hash, or `main-SNAPSHOT`.
 
 ### Requirements
 

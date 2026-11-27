@@ -7,7 +7,7 @@ plugins {
 println("Java used for Gradle (configuration): ${System.getProperty('java.version')} (${System.getProperty('java.vendor')}), java.home = ${System.getProperty('java.home')}")
 
 group = 'neon'
-version = '0.0.6'
+version = '0.0.7'
 
 repositories {
     mavenCentral()
