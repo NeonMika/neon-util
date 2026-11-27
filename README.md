@@ -69,7 +69,7 @@ dependencies {
 </dependency>
 ```
 
-Replace the version placeholder with a release tag (e.g. `v0.1.0`), a commit hash, or `main-SNAPSHOT`.
+Replace the version placeholder with a release tag (e.g. `v0.1.1`), a commit hash, or `main-SNAPSHOT`.
 
 ### Requirements
 
@@ -98,7 +98,8 @@ All functions are top-level functions in the package `neon.jvm`:
 ```kotlin
 import neon.jvm.*
 
-printFullJavaInformation()       // the complete report
+printFullJavaInformation()       // the complete report, without environment variables
+printFullJavaInformation(printEnvironment = true)  // the complete report, including environment variables
 
 printRuntimeInformation()        // or only the parts you are interested in
 printGarbageCollectorInformation()
@@ -114,7 +115,8 @@ import neon.jvm.JVMUtilKt;
 
 public class Main {
     public static void main(String[] args) {
-        JVMUtilKt.printFullJavaInformation();
+        JVMUtilKt.printFullJavaInformation();      // without environment variables
+        JVMUtilKt.printFullJavaInformation(true);  // including environment variables
         JVMUtilKt.printHotSpotVmFlags();
     }
 }
@@ -127,14 +129,15 @@ A common use is a test that prints the environment of a CI runner or of the IDE'
 ```kotlin
 class EnvironmentTest {
     @Test
-    fun printEnvironment() = printFullJavaInformation()
+    fun printJvmInformation() = printFullJavaInformation()
 }
 ```
 
 ## What is reported
 
-`printFullJavaInformation()` prints all of the following sections in this order. Each section can also be printed on its own
-with the function in the first column.
+`printFullJavaInformation()` prints all of the following sections in this order, except for the environment variables. Those are
+only included with `printFullJavaInformation(printEnvironment = true)`, since they often contain sensitive values. Each section
+can also be printed on its own with the function in the first column.
 
 | Function | Source | Contents |
 |---|---|---|
@@ -154,7 +157,7 @@ with the function in the first column.
 | `printProcessInformation()` | `ProcessHandle` | PID, parent PID, user, executable, command line, start instant, CPU time |
 | `printLocalizationInformation()` | `Charset`, `Locale`, `ZoneId` | Default charset and encodings (`file.encoding`, `native.encoding`, `stdout.encoding`, `sun.jnu.encoding`), locales, time zone, line separator |
 | `printModuleInformation()` | `ModuleLayer` | Modules resolved in the boot layer |
-| `printEnvironmentInformation()` | `System.getenv()` | All environment variables, `PATH` split into entries. Values whose names look like secrets (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `AUTH`, …) are masked. |
+| `printEnvironmentInformation()` | `System.getenv()` | *Only with `printEnvironment = true`.* All environment variables, `PATH` split into entries. Values whose names look like secrets (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `AUTH`, …) are masked. |
 | `printJavaCompilerInformation()` | `javax.tools.ToolProvider` | System Java compiler and supported source versions |
 | `printJdiInformation()` | `com.sun.jdi.Bootstrap` | JDI interface version and the VM version of a debuggee launched through the default connector |
 
@@ -189,13 +192,16 @@ HotSpot VM flags:
   ...
 ```
 
-> **Note:** The report contains system properties, paths, the command line and environment variables. Even with masking of
-> secret-looking environment variables, review the output before posting it publicly.
+> **Note:** The report contains system properties, paths and the command line, and optionally environment variables. Even with
+> masking of secret-looking environment variables, review the output before posting it publicly.
 
-## Upgrading from 0.0.x
+## Upgrading
 
 Version 0.1.0 renamed `printJavaInformation()` to `printFullJavaInformation()` (in Java: `JVMUtilKt.printFullJavaInformation()`).
 The report now starts with a "Java runtime information" section header, like all other sections.
+
+Since 0.1.1, `printFullJavaInformation()` no longer prints the environment variables by default. Pass `printEnvironment = true`
+(in Java: `JVMUtilKt.printFullJavaInformation(true)`) to include them.
 
 ## Building
 
