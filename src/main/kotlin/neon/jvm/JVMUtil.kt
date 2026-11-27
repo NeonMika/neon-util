@@ -1,6 +1,8 @@
 package neon.jvm
 
 import com.sun.jdi.Bootstrap
+import com.sun.management.HotSpotDiagnosticMXBean
+import com.sun.management.VMOption
 import java.io.File
 import java.lang.management.BufferPoolMXBean
 import java.lang.management.GarbageCollectorMXBean
@@ -75,6 +77,7 @@ fun printJavaInformation() {
     printClassLoadingInformation()
     printJitCompilationInformation()
     printBufferPoolInformation()
+    printHotSpotVmFlags()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -245,4 +248,33 @@ private fun printBufferPoolInformation() {
         println("  Memory used: ${pool.memoryUsed.formatBytes()}")
         println("  Total capacity: ${pool.totalCapacity.formatBytes()}")
     }
+}
+
+private val INTERESTING_VM_FLAGS = listOf(
+    "UseSerialGC", "UseParallelGC", "UseG1GC", "UseZGC", "UseShenandoahGC", "UseEpsilonGC",
+    "InitialHeapSize", "MaxHeapSize", "MinHeapSize", "MaxDirectMemorySize", "MaxMetaspaceSize", "ReservedCodeCacheSize",
+    "UseCompressedOops", "UseCompressedClassPointers", "UseCompactObjectHeaders",
+    "UseContainerSupport", "ActiveProcessorCount", "MaxRAMPercentage", "InitialRAMPercentage",
+    "TieredCompilation", "UseStringDeduplication", "UseLargePages", "UseNUMA",
+    "HeapDumpOnOutOfMemoryError", "HeapDumpPath", "ExitOnOutOfMemoryError", "ThreadStackSize"
+)
+
+private fun printHotSpotVmFlags() {
+    printSectionHeader("HotSpot VM flags")
+    val hotSpot = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean::class.java)
+    if (hotSpot == null) {
+        println("HotSpotDiagnosticMXBean not available (not a HotSpot VM?)")
+        return
+    }
+    for (name in INTERESTING_VM_FLAGS) {
+        val option = try {
+            hotSpot.getVMOption(name)
+        } catch (_: IllegalArgumentException) {
+            null // Flag does not exist in this VM version
+        } ?: continue
+        println("  - ${option.name} = ${option.value} (origin: ${option.origin}${if (option.isWriteable) ", writeable" else ""})")
+    }
+    val nonDefault = hotSpot.diagnosticOptions.filter { it.origin != VMOption.Origin.DEFAULT }
+    println("Non-default writeable (manageable) flags:")
+    println(if (nonDefault.isEmpty()) "  none" else nonDefault.joinToString("\n") { "  - ${it.name} = ${it.value} (origin: ${it.origin})" })
 }
