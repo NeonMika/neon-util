@@ -1,166 +1,49 @@
-import org.gradle.internal.jvm.Jvm
-
 plugins {
-    id 'java'
     id 'org.jetbrains.kotlin.jvm' version '2.4.21'
     id 'maven-publish'
 }
 
-def configurationJvm = Jvm.current()
-println("Java used for Gradle configuration (Jvm.current()): " + configurationJvm)
-
-def configurationJavaHome = System.getProperty('java.home')
-println("java.home during Gradle configuration: " + configurationJavaHome)
-
-version = '0.0.6'
 group = 'neon'
+version = '0.0.6'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // # JUnit
     testImplementation 'junit:junit:4.13.2'
 }
 
-// This is executed on all subprojects
-allprojects {
-    // This is executed on all subprojects that use the NodeJS plugin (https://github.com/node-gradle/gradle-node-plugin - npm_<...> (e.g., npm_install))
-    plugins.withId('com.github.node-gradle.node') {
-        node {
-            download = true
-        }
+kotlin {
+    jvmToolchain(25)
+}
 
-        build {
-            dependsOn("npmInstall")
-        }
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+def runtimeClasspath = configurations.runtimeClasspath
+
+jar {
+    manifest {
+        attributes(
+                'Implementation-Version': project.version,
+                'Version': project.version,
+                // Lets the jar be run directly (java -cp neon-util.jar ...) with its dependencies placed next to it
+                'Class-Path': runtimeClasspath.elements.map { files -> files.collect { it.asFile.name }.join(' ') }
+        )
     }
+}
 
-    plugins.withId('java') {
-        // Both apply to Java as well as Kotlin
-        // https://kotlinlang.org/docs/gradle.html#gradle-java-toolchains-support: "Note that setting a toolchain via the kotlin extension will update the toolchain for Java compile
-        // tasks as well."
-        java { // This should work too, but we follow the example given in the link
-            toolchain {
-                languageVersion = JavaLanguageVersion.of(25)
-            }
-            withSourcesJar()
-            withJavadocJar()
-        }
-        
-        tasks.register('copyRuntimeLibrariesToLib', Copy) {
-            def runtimeClasspath = project.configurations.runtimeClasspath
-            def libsDir = layout.buildDirectory.dir("libs")
-            doFirst {
-                println "copyRuntimeClasspathToLib:"
-                println "copy project.configurations.runtimeClasspath.files -> buildDir\\libs"
-                println "[${runtimeClasspath.files.collect { it.getName() }.join(', ')}] -> ${libsDir.get().asFile}"
-            }
-            into libsDir
-            from runtimeClasspath
-            exclude "tools.jar"
-        }
+// Copies the runtime dependencies next to the jar, so the manifest's Class-Path entries resolve
+tasks.register('copyRuntimeLibrariesToLib', Copy) {
+    from runtimeClasspath
+    into layout.buildDirectory.dir('libs')
+}
 
-        build {
-            dependsOn('copyRuntimeLibrariesToLib')
-            doFirst {
-                println "Java used for building (Toolchain specification): " + java.toolchain.displayName
-                JavaCompiler compiler = javaToolchains.compilerFor(java.toolchain).get()
-                println "Java used for building (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-                println "Java used for building (Compiler - Installation path): ${compiler.metadata.installationPath}"
-                println "Java used for building (Compiler - Executable path): " + compiler.executablePath
-            }
-        }
-
-        tasks.register('jarSettings') {
-            def projectVersion = project.version
-            doFirst {
-                println("Class-Path: " + configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '))
-                println("Version: " + projectVersion)
-                jar {
-                    manifest {
-                        attributes(
-                                'Class-Path': configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '),
-                                'Version': projectVersion
-                        )
-                    }
-                }
-            }
-        }
-        jar {
-            dependsOn('jarSettings')
-        }
-
-        test {
-            doFirst {
-                println "Java used for testing (Toolchain specification): " + java.toolchain.displayName
-                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
-                println "Java used for testing (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-                println "Java used for testing (Compiler - Installation path): ${compiler.metadata.installationPath}"
-                println "Java used for testing (Compiler - Executable path): " + compiler.executablePath
-
-                def testJvm = Jvm.current()
-                println("Jvm.current() while testing: " + testJvm)
-
-                def testJavaHome = System.getProperty('java.home')
-                println("java.home while testing: " + testJavaHome)
-            }
-        }
-    }
-    
-    // This is executed on all subprojects that use the application plugin (https://docs.gradle.org/current/userguide/application_plugin.html - run, startScripts, installDist,
-    // distZip, distTar)
-    plugins.withId('application') {
-        tasks.register('jarMainClass') {
-            doFirst {
-                println("Main-Class: " + application.mainClass.get())
-                jar {
-                    manifest {
-                        attributes(
-                                "Main-Class": application.mainClass.get(),
-                        )
-                    }
-                }
-            }
-        }
-        jar {
-            dependsOn('jarMainClass')
-        }
-
-        // specify that all files from the dist and out folder should be zipped
-        distZip {
-            dependsOn('copyRuntimeLibrariesToLib')
-            from("$projectDir\\out")
-            from("$projectDir\\dist")
-            archiveFileName = "dist.zip"
-            destinationDirectory = file("$projectDir")
-        }
-        distTar.enabled = false
-
-        run {
-            doFirst {
-                println "Java used for running (Toolchain specification): " + java.toolchain.displayName
-                JavaLauncher compiler = javaToolchains.launcherFor(java.toolchain).get()
-                println "Java used for running (Compiler): ${compiler.metadata.languageVersion}, ${compiler.metadata.jvmVersion}, ${compiler.metadata.javaRuntimeVersion}, ${compiler.metadata.vendor}"
-                println "Java used for running (Compiler - Installation path): ${compiler.metadata.installationPath}"
-                println "Java used for running (Compiler - Executable path): " + compiler.executablePath
-            }
-        }
-    }
-
-    // This is executed on all subprojects that use the base plugin (https://docs.gradle.org/current/userguide/base_plugin.html - clean, check, assemble, build,
-    // build<Configuration>, clean<Task>)
-    plugins.withId("base") {
-        // Extended clean
-        clean.doFirst {
-            // group 'Build'
-            // description 'Deletes the project\'s out and dist folder, as well as dist.zip'
-            delete "$projectDir\\out"
-            delete "$projectDir\\dist"
-            delete "$projectDir\\dist.zip"
-        }
-    }
+tasks.named('assemble') {
+    dependsOn 'copyRuntimeLibrariesToLib'
 }
 
 publishing {
