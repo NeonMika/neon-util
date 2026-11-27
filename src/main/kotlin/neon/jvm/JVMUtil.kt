@@ -63,6 +63,7 @@ fun printJavaInformation() {
     println("VM Name:\n  ${runtime.vmName}")
     println("VM vendor:\n  ${runtime.vmVendor}")
     println("VM version:\n  ${runtime.vmVersion}")
+    printOperatingSystemInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -79,4 +80,50 @@ fun printJavaInformation() {
     printDebuggerVersionByConnecting()
     println("==================================")
     println()
+}
+
+private fun printSectionHeader(title: String) {
+    println("==================================")
+    println("$title:")
+    println()
+}
+
+private fun printValue(label: String, value: Any?) = println("$label:\n  $value")
+
+private fun Long.formatBytes(): String {
+    if (this < 0) return "undefined ($this)"
+    val units = listOf("B", "KiB", "MiB", "GiB", "TiB")
+    var value = this.toDouble()
+    var unit = 0
+    while (value >= 1024 && unit < units.lastIndex) {
+        value /= 1024
+        unit++
+    }
+    return if (unit == 0) "$this B" else "%.2f %s (%d B)".format(value, units[unit], this)
+}
+
+private fun Double.formatLoad() = if (this < 0) "not available ($this)" else "%.2f %%".format(this * 100)
+
+private fun printOperatingSystemInformation() {
+    val os = ManagementFactory.getOperatingSystemMXBean()
+    printSectionHeader("Operating system information")
+    printValue("Name", os.name)
+    printValue("Version", os.version)
+    printValue("Architecture", os.arch)
+    printValue("Available processors", os.availableProcessors)
+    printValue("System load average (last minute)", if (os.systemLoadAverage < 0) "not available" else "%.2f".format(os.systemLoadAverage))
+    if (os is com.sun.management.OperatingSystemMXBean) {
+        println()
+        printValue("CPU load (whole system)", os.cpuLoad.formatLoad())
+        printValue("CPU load (this process)", os.processCpuLoad.formatLoad())
+        printValue("Process CPU time", Duration.ofNanos(os.processCpuTime))
+        printValue("Total physical memory", os.totalMemorySize.formatBytes())
+        printValue("Free physical memory", os.freeMemorySize.formatBytes())
+        printValue("Total swap space", os.totalSwapSpaceSize.formatBytes())
+        printValue("Free swap space", os.freeSwapSpaceSize.formatBytes())
+        printValue("Committed virtual memory", os.committedVirtualMemorySize.formatBytes())
+    }
+    if (os is com.sun.management.UnixOperatingSystemMXBean) {
+        printValue("Open file descriptors", "${os.openFileDescriptorCount} (max: ${os.maxFileDescriptorCount})")
+    }
 }
