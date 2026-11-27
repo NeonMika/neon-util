@@ -7,7 +7,7 @@ plugins {
 println("Java used for Gradle (configuration): ${System.getProperty('java.version')} (${System.getProperty('java.vendor')}), java.home = ${System.getProperty('java.home')}")
 
 group = 'neon'
-version = '0.0.6'
+version = '0.0.7'
 
 repositories {
     mavenCentral()
@@ -46,24 +46,29 @@ tasks.register('copyRuntimeLibrariesToLib', Copy) {
     into layout.buildDirectory.dir('libs')
 }
 
-tasks.named('assemble') {
+// The copy shares build/libs with the jars, so Gradle treats it as producing all files in there.
+// Every jar therefore depends on it, which makes all consumers of the jars (e.g. publishing) depend on it as well.
+tasks.withType(Jar).configureEach {
     dependsOn 'copyRuntimeLibrariesToLib'
 }
 
 // Prints the toolchain JDK used for compiling and testing
-def printJavaInstallation(String purpose, JavaInstallationMetadata metadata) {
-    println("Java used for $purpose: ${metadata.languageVersion}, ${metadata.jvmVersion}, ${metadata.javaRuntimeVersion}, ${metadata.vendor}")
-    println("Java used for $purpose (installation path): ${metadata.installationPath}")
-}
-
 tasks.named('compileKotlin') {
     def compiler = javaToolchains.compilerFor(java.toolchain)
-    doFirst { printJavaInstallation('compiling', compiler.get().metadata) }
+    doFirst {
+        def metadata = compiler.get().metadata
+        println("Java used for compiling: ${metadata.languageVersion}, ${metadata.jvmVersion}, ${metadata.javaRuntimeVersion}, ${metadata.vendor}")
+        println("Java used for compiling (installation path): ${metadata.installationPath}")
+    }
 }
 
 tasks.named('test') {
     def launcher = javaLauncher
-    doFirst { printJavaInstallation('testing', launcher.get().metadata) }
+    doFirst {
+        def metadata = launcher.get().metadata
+        println("Java used for testing: ${metadata.languageVersion}, ${metadata.jvmVersion}, ${metadata.javaRuntimeVersion}, ${metadata.vendor}")
+        println("Java used for testing (installation path): ${metadata.installationPath}")
+    }
 }
 
 publishing {
