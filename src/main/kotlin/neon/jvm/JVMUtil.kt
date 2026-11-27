@@ -2,6 +2,7 @@ package neon.jvm
 
 import com.sun.jdi.Bootstrap
 import java.io.File
+import java.lang.management.BufferPoolMXBean
 import java.lang.management.GarbageCollectorMXBean
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryUsage
@@ -73,6 +74,7 @@ fun printJavaInformation() {
     printThreadInformation()
     printClassLoadingInformation()
     printJitCompilationInformation()
+    printBufferPoolInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -232,5 +234,15 @@ private fun printJitCompilationInformation() {
     printValue("Compilation time monitoring supported", compilation.isCompilationTimeMonitoringSupported)
     if (compilation.isCompilationTimeMonitoringSupported) {
         printValue("Total compilation time", Duration.ofMillis(compilation.totalCompilationTime))
+    }
+}
+
+private fun printBufferPoolInformation() {
+    printSectionHeader("Buffer pool information")
+    for (pool in ManagementFactory.getPlatformMXBeans(BufferPoolMXBean::class.java)) {
+        println("${pool.name}:")
+        println("  Buffer count: ${pool.count}")
+        println("  Memory used: ${pool.memoryUsed.formatBytes()}")
+        println("  Total capacity: ${pool.totalCapacity.formatBytes()}")
     }
 }
