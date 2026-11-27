@@ -1,6 +1,7 @@
 package neon.jvm
 
 import com.sun.jdi.Bootstrap
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.time.Duration
 import java.time.Instant
@@ -29,7 +30,7 @@ fun printJavaInformation() {
     fun Set<*>.joinToListString() = joinToString("\n") { "  - $it" }
     fun List<*>.joinToListString() = joinToString("\n") { "  - $it" }
 
-    fun String.splitPaths() = replace(":\\", "####").replace(":",";").replace("####", ":\\").split(";")
+    fun String.splitPaths() = split(File.pathSeparator).filter { it.isNotEmpty() }
 
     println()
     println("|==================================|")
