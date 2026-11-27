@@ -42,17 +42,17 @@ fun printJavaInformation() {
     // println("pid: ${runtime.pid}") // since Java 10
     println("Classpath:\n${runtime.classPath.splitPaths().joinToListString()}")
     println("Library path:\n${runtime.libraryPath.splitPaths().joinToListString()}")
-    println("isBootClassPathSupported:\n ${runtime.isBootClassPathSupported}")
+    println("isBootClassPathSupported:\n  ${runtime.isBootClassPathSupported}")
     if (runtime.isBootClassPathSupported) println(
         "Boot Classpath:\n${
             runtime.bootClassPath.splitPaths().joinToListString()
-        }}"
+        }"
     )
     println()
     println("Spec name:\n  ${runtime.specName}")
     println("Spec Vendor:\n  ${runtime.specVendor}")
     println("Spec Version:\n  ${runtime.specVersion}")
-    println("Management Spec Version:\n ${runtime.managementSpecVersion}")
+    println("Management Spec Version:\n  ${runtime.managementSpecVersion}")
     println()
     println("Start time:\n  ${runtime.startTime}")
     println("Uptime:\n  ${runtime.uptime}")
@@ -64,7 +64,7 @@ fun printJavaInformation() {
     println("Java compiler information:")
     println()
     val compiler = ToolProvider.getSystemJavaCompiler()
-    println("Name:\n " + compiler.name())
+    println("Name:\n  " + compiler.name())
     println("Supported version:\n  " + compiler.sourceVersions)
     println("==================================")
     println("JDI information:")
