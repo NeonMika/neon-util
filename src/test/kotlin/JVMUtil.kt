@@ -50,7 +50,8 @@ class JVMUtil {
 
     @Test
     fun fullJavaInformationContainsAllSectionsInOrder() {
-        val output = captureOutput { printFullJavaInformation() }
+        // Normalize Windows line endings (println uses System.lineSeparator())
+        val output = captureOutput { printFullJavaInformation() }.replace(System.lineSeparator(), "\n")
         var lastIndex = -1
         for ((title, _) in sections) {
             val index = output.indexOf("\n$title:\n")
