@@ -7,10 +7,10 @@
 A small Kotlin/JVM library that answers **"Which JVM am I *actually* running on, and how is it configured?"** with a single call.
 
 ```kotlin
-import neon.jvm.printJavaInformation
+import neon.jvm.printFullJavaInformation
 
 fun main() {
-    printJavaInformation()
+    printFullJavaInformation()
 }
 ```
 
@@ -18,6 +18,9 @@ It prints a detailed report of the running JVM to `stdout`: runtime and VM detai
 setup, threads, OS resources, encodings, environment and more. It is meant for debugging those "works on my machine" problems,
 such as an unexpected JDK being picked up by the IDE or Gradle, a container limiting memory or CPUs, a different garbage
 collector, or a wrong default charset.
+
+Each part of the report is also available on its own, e.g. `printHotSpotVmFlags()` or `printMemoryInformation()`
+(see [What is reported](#what-is-reported)).
 
 ## Installation
 
@@ -66,12 +69,12 @@ dependencies {
 </dependency>
 ```
 
-Replace the version placeholder with a release tag (e.g. `v0.0.7`), a commit hash, or `main-SNAPSHOT`.
+Replace the version placeholder with a release tag (e.g. `v0.1.0`), a commit hash, or `main-SNAPSHOT`.
 
 ### Requirements
 
 - **Java 25** or newer (the library is compiled with a Java 25 toolchain).
-- A **full JDK**, not just a JRE: the report uses the `java.compiler` (`javax.tools`) and `jdk.jdi` modules.
+- A **full JDK** is recommended: on a JRE, the Java compiler and JDI sections report that they are not available.
 
 ## Usage
 
@@ -90,10 +93,16 @@ manifest's `Class-Path`. To use it elsewhere, copy the whole `build/libs` folder
 
 ### From Kotlin
 
-```kotlin
-import neon.jvm.printJavaInformation
+All functions are top-level functions in the package `neon.jvm`:
 
-printJavaInformation()
+```kotlin
+import neon.jvm.*
+
+printFullJavaInformation()       // the complete report
+
+printRuntimeInformation()        // or only the parts you are interested in
+printGarbageCollectorInformation()
+printHotSpotVmFlags()
 ```
 
 ### From Java
@@ -105,7 +114,8 @@ import neon.jvm.JVMUtilKt;
 
 public class Main {
     public static void main(String[] args) {
-        JVMUtilKt.printJavaInformation();
+        JVMUtilKt.printFullJavaInformation();
+        JVMUtilKt.printHotSpotVmFlags();
     }
 }
 ```
@@ -117,33 +127,36 @@ A common use is a test that prints the environment of a CI runner or of the IDE'
 ```kotlin
 class EnvironmentTest {
     @Test
-    fun printEnvironment() = printJavaInformation()
+    fun printEnvironment() = printFullJavaInformation()
 }
 ```
 
 ## What is reported
 
-| Section | Source | Contents |
+`printFullJavaInformation()` prints all of the following sections in this order. Each section can also be printed on its own
+with the function in the first column.
+
+| Function | Source | Contents |
 |---|---|---|
-| Java runtime | `RuntimeMXBean` | VM name, vendor and version, VM info (execution mode, CDS), PID, input arguments, system properties, class/library/boot path, spec versions, start time, uptime |
-| Operating system | `OperatingSystemMXBean` | OS name, version, architecture, processors, load average, CPU load, physical/swap/virtual memory, open file descriptors |
-| Memory | `MemoryMXBean` | Heap and non-heap usage (init, used, committed, max) |
-| Memory pools | `MemoryPoolMXBean` | Every pool (Eden, Survivor, Old Gen, Metaspace, CodeCache, …) with type, usage, peak usage and managing collectors |
-| Garbage collectors | `GarbageCollectorMXBean` | Active collectors with collection count and time |
-| Memory managers | `MemoryManagerMXBean` | All memory managers and the pools they manage |
-| Threads | `ThreadMXBean` | Live/daemon/peak/started counts, deadlocks, monitoring capabilities, list of live threads |
-| Class loading | `ClassLoadingMXBean` | Loaded, total loaded and unloaded classes |
-| JIT compilation | `CompilationMXBean` | JIT compiler name and total compilation time |
-| Buffer pools | `BufferPoolMXBean` | Direct and mapped buffers: count, memory used, capacity |
-| HotSpot VM flags | `HotSpotDiagnosticMXBean` | Effective values and origins of key flags (GC selection, heap sizes, compressed oops, container support, …) and all non-default manageable flags |
-| Java Flight Recorder | `FlightRecorderMXBean` | Availability and active recordings |
-| Runtime version and resources | `Runtime` | Parsed version (feature/interim/update/patch/build), container-aware processor count and memory limits |
-| Process | `ProcessHandle` | PID, parent PID, user, executable, command line, start instant, CPU time |
-| Locale, charset and time zone | `Charset`, `Locale`, `ZoneId` | Default charset and encodings (`file.encoding`, `native.encoding`, `stdout.encoding`, `sun.jnu.encoding`), locales, time zone, line separator |
-| Modules | `ModuleLayer` | Modules resolved in the boot layer |
-| Environment variables | `System.getenv()` | All environment variables, `PATH` split into entries. Values whose names look like secrets (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `AUTH`, …) are masked. |
-| Java compiler | `javax.tools.ToolProvider` | System Java compiler and supported source versions |
-| JDI | `com.sun.jdi.Bootstrap` | JDI interface version and the VM version of a debuggee launched through the default connector |
+| `printRuntimeInformation()` | `RuntimeMXBean` | VM name, vendor and version, VM info (execution mode, CDS), PID, input arguments, system properties, class/library/boot path, spec versions, start time, uptime |
+| `printOperatingSystemInformation()` | `OperatingSystemMXBean` | OS name, version, architecture, processors, load average, CPU load, physical/swap/virtual memory, open file descriptors |
+| `printMemoryInformation()` | `MemoryMXBean` | Heap and non-heap usage (init, used, committed, max) |
+| `printMemoryPoolInformation()` | `MemoryPoolMXBean` | Every pool (Eden, Survivor, Old Gen, Metaspace, CodeCache, …) with type, usage, peak usage and managing collectors |
+| `printGarbageCollectorInformation()` | `GarbageCollectorMXBean` | Active collectors with collection count and time |
+| `printMemoryManagerInformation()` | `MemoryManagerMXBean` | All memory managers and the pools they manage |
+| `printThreadInformation()` | `ThreadMXBean` | Live/daemon/peak/started counts, deadlocks, monitoring capabilities, list of live threads |
+| `printClassLoadingInformation()` | `ClassLoadingMXBean` | Loaded, total loaded and unloaded classes |
+| `printJitCompilationInformation()` | `CompilationMXBean` | JIT compiler name and total compilation time |
+| `printBufferPoolInformation()` | `BufferPoolMXBean` | Direct and mapped buffers: count, memory used, capacity |
+| `printHotSpotVmFlags()` | `HotSpotDiagnosticMXBean` | Effective values and origins of key flags (GC selection, heap sizes, compressed oops, container support, …) and all non-default manageable flags |
+| `printFlightRecorderInformation()` | `FlightRecorderMXBean` | Availability and active recordings |
+| `printRuntimeResourceInformation()` | `Runtime` | Parsed version (feature/interim/update/patch/build), container-aware processor count and memory limits |
+| `printProcessInformation()` | `ProcessHandle` | PID, parent PID, user, executable, command line, start instant, CPU time |
+| `printLocalizationInformation()` | `Charset`, `Locale`, `ZoneId` | Default charset and encodings (`file.encoding`, `native.encoding`, `stdout.encoding`, `sun.jnu.encoding`), locales, time zone, line separator |
+| `printModuleInformation()` | `ModuleLayer` | Modules resolved in the boot layer |
+| `printEnvironmentInformation()` | `System.getenv()` | All environment variables, `PATH` split into entries. Values whose names look like secrets (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `AUTH`, …) are masked. |
+| `printJavaCompilerInformation()` | `javax.tools.ToolProvider` | System Java compiler and supported source versions |
+| `printJdiInformation()` | `com.sun.jdi.Bootstrap` | JDI interface version and the VM version of a debuggee launched through the default connector |
 
 ### Example output (excerpt)
 
@@ -179,6 +192,11 @@ HotSpot VM flags:
 > **Note:** The report contains system properties, paths, the command line and environment variables. Even with masking of
 > secret-looking environment variables, review the output before posting it publicly.
 
+## Upgrading from 0.0.x
+
+Version 0.1.0 renamed `printJavaInformation()` to `printFullJavaInformation()` (in Java: `JVMUtilKt.printFullJavaInformation()`).
+The report now starts with a "Java runtime information" section header, like all other sections.
+
 ## Building
 
 The project uses the Gradle wrapper. You don't need a local Gradle installation. If no JDK 25 is installed, the
@@ -202,11 +220,11 @@ artifacts.
 After every published release, the [Test JitPack](.github/workflows/jitpack.yml) workflow checks that the release can actually
 be used from JitPack. A minimal Gradle consumer project ([`jitpack-test/`](jitpack-test)) declares a dependency on the new
 version and runs code from it. JitPack builds new versions on their first request, so the check retries once a minute, up to
-10 attempts. It can also be started manually for any tag or commit:
+10 attempts. It can also be started manually for any tag or commit from 0.1.0 on:
 
 ```shell
-gh workflow run jitpack.yml -f version=v0.0.7
-./gradlew -p jitpack-test run -PneonUtilVersion=v0.0.7   # the same check, locally
+gh workflow run jitpack.yml -f version=v0.1.0
+./gradlew -p jitpack-test run -PneonUtilVersion=v0.1.0   # the same check, locally
 ```
 
 ## License
