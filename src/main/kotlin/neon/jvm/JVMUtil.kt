@@ -71,6 +71,7 @@ fun printJavaInformation() {
     printGarbageCollectorInformation()
     printMemoryManagerInformation()
     printThreadInformation()
+    printClassLoadingInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -208,4 +209,13 @@ private fun printThreadInformation() {
     for (info in threads.getThreadInfo(threads.allThreadIds).filterNotNull().sortedBy { it.threadId }) {
         println("  - [${info.threadId}] ${info.threadName} (${info.threadState}${if (info.isDaemon) ", daemon" else ""})")
     }
+}
+
+private fun printClassLoadingInformation() {
+    val classLoading = ManagementFactory.getClassLoadingMXBean()
+    printSectionHeader("Class loading information")
+    printValue("Currently loaded classes", classLoading.loadedClassCount)
+    printValue("Total loaded classes", classLoading.totalLoadedClassCount)
+    printValue("Unloaded classes", classLoading.unloadedClassCount)
+    printValue("Verbose class loading", classLoading.isVerbose)
 }
