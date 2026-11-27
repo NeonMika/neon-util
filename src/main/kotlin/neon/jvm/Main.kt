@@ -5,5 +5,5 @@ package neon.jvm
  * Prints the information about the JVM the jar is running on.
  */
 fun main() {
-    printJavaInformation()
+    printFullJavaInformation()
 }

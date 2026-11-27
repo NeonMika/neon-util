@@ -1,0 +1,19 @@
+plugins {
+    id 'application'
+}
+
+// The neon-util version to test, e.g. -PneonUtilVersion=v0.0.7
+def neonUtilVersion = providers.gradleProperty('neonUtilVersion').getOrElse('main-SNAPSHOT')
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation "com.github.NeonMika:neon-util:$neonUtilVersion"
+}
+
+application {
+    mainClass = 'JitPackTest'
+}

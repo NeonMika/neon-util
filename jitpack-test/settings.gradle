@@ -1,0 +1,3 @@
+// Standalone consumer build (not part of the neon-util build) used by .github/workflows/jitpack.yml
+// to check that a released version of neon-util can be resolved from JitPack and used.
+rootProject.name = 'neon-util-jitpack-test'

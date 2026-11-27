@@ -16,63 +16,15 @@ import java.util.Locale
 import javax.tools.ToolProvider
 import jdk.management.jfr.FlightRecorderMXBean
 
-internal fun printDebuggerVersionByConnecting() {
-    try {
-        val launchingConnector = Bootstrap.virtualMachineManager().defaultConnector()
-        val arguments = launchingConnector.defaultArguments()
-        arguments["main"]!!.setValue("NOPE")
-        arguments["options"]!!.setValue(
-            "-cp ."
-        )
-        val vm = launchingConnector.launch(arguments)
-        println("VM version of debuggee:\n  ${vm.version()}")
-        vm.exit(0)
-    } catch (ex: Exception) {
-        println("Could not determine debuggee VM version.\nException: $ex")
-    }
-}
-
-fun printJavaInformation() {
-    val runtime = ManagementFactory.getRuntimeMXBean()
-
-
-    fun Set<*>.joinToListString() = joinToString("\n") { "  - $it" }
-    fun List<*>.joinToListString() = joinToString("\n") { "  - $it" }
-
-    fun String.splitPaths() = split(File.pathSeparator).filter { it.isNotEmpty() }
-
+/**
+ * Prints all available information about the running JVM, i.e., all sections below in this order.
+ */
+fun printFullJavaInformation() {
     println()
     println("|==================================|")
     println("|======== JAVA INFORMATION ========|")
     println("|==================================|")
-    println("Java Runtime:")
-    println()
-    println("Name:\n  ${runtime.name}")
-    println("Input arguments:\n${runtime.inputArguments.joinToListString()}")
-    println("System properties:\n${runtime.systemProperties.entries.joinToListString()}")
-    println()
-    println("PID:\n  ${runtime.pid}")
-    println("Classpath:\n${runtime.classPath.splitPaths().joinToListString()}")
-    println("Library path:\n${runtime.libraryPath.splitPaths().joinToListString()}")
-    println("isBootClassPathSupported:\n  ${runtime.isBootClassPathSupported}")
-    if (runtime.isBootClassPathSupported) println(
-        "Boot Classpath:\n${
-            runtime.bootClassPath.splitPaths().joinToListString()
-        }"
-    )
-    println()
-    println("Spec name:\n  ${runtime.specName}")
-    println("Spec Vendor:\n  ${runtime.specVendor}")
-    println("Spec Version:\n  ${runtime.specVersion}")
-    println("Management Spec Version:\n  ${runtime.managementSpecVersion}")
-    println()
-    println("Start time:\n  ${Instant.ofEpochMilli(runtime.startTime)} (${runtime.startTime} ms since epoch)")
-    println("Uptime:\n  ${Duration.ofMillis(runtime.uptime)} (${runtime.uptime} ms)")
-    println()
-    println("VM Name:\n  ${runtime.vmName}")
-    println("VM vendor:\n  ${runtime.vmVendor}")
-    println("VM version:\n  ${runtime.vmVersion}")
-    println("VM info (execution mode, class data sharing):\n  ${System.getProperty("java.vm.info")}")
+    printRuntimeInformation()
     printOperatingSystemInformation()
     printMemoryInformation()
     printMemoryPoolInformation()
@@ -89,22 +41,93 @@ fun printJavaInformation() {
     printLocalizationInformation()
     printModuleInformation()
     printEnvironmentInformation()
+    printJavaCompilerInformation()
+    printJdiInformation()
     println("==================================")
-    println("Java compiler information:")
     println()
+}
+
+private fun Collection<*>.joinToListString() = joinToString("\n") { "  - $it" }
+
+private fun String.splitPaths() = split(File.pathSeparator).filter { it.isNotEmpty() }
+
+/**
+ * Prints the runtime information ([java.lang.management.RuntimeMXBean]): VM name, vendor and version, PID, input arguments,
+ * system properties, class/library/boot path, spec versions, start time and uptime.
+ */
+fun printRuntimeInformation() {
+    val runtime = ManagementFactory.getRuntimeMXBean()
+    printSectionHeader("Java runtime information")
+    printValue("Name", runtime.name)
+    println("Input arguments:\n${runtime.inputArguments.joinToListString()}")
+    println("System properties:\n${runtime.systemProperties.entries.joinToListString()}")
+    println()
+    printValue("PID", runtime.pid)
+    println("Classpath:\n${runtime.classPath.splitPaths().joinToListString()}")
+    println("Library path:\n${runtime.libraryPath.splitPaths().joinToListString()}")
+    printValue("isBootClassPathSupported", runtime.isBootClassPathSupported)
+    if (runtime.isBootClassPathSupported) {
+        println("Boot Classpath:\n${runtime.bootClassPath.splitPaths().joinToListString()}")
+    }
+    println()
+    printValue("Spec name", runtime.specName)
+    printValue("Spec Vendor", runtime.specVendor)
+    printValue("Spec Version", runtime.specVersion)
+    printValue("Management Spec Version", runtime.managementSpecVersion)
+    println()
+    printValue("Start time", "${Instant.ofEpochMilli(runtime.startTime)} (${runtime.startTime} ms since epoch)")
+    printValue("Uptime", "${Duration.ofMillis(runtime.uptime)} (${runtime.uptime} ms)")
+    println()
+    printValue("VM Name", runtime.vmName)
+    printValue("VM vendor", runtime.vmVendor)
+    printValue("VM version", runtime.vmVersion)
+    printValue("VM info (execution mode, class data sharing)", System.getProperty("java.vm.info"))
+}
+
+/**
+ * Prints the system Java compiler ([javax.tools.ToolProvider]) and its supported source versions.
+ * Only available when running on a JDK, not on a JRE.
+ */
+fun printJavaCompilerInformation() {
+    printSectionHeader("Java compiler information")
     val compiler = ToolProvider.getSystemJavaCompiler()
-    println("Name:\n  " + compiler.name())
-    println("Supported version:\n  " + compiler.sourceVersions)
-    println("==================================")
-    println("JDI information:")
-    println()
-    println("Virtual Machine Manager Major Interface Version:")
-    println("  " + Bootstrap.virtualMachineManager().majorInterfaceVersion())
-    println("Virtual Machine Manager Minor Interface Version:")
-    println("  " + Bootstrap.virtualMachineManager().minorInterfaceVersion())
+    if (compiler == null) {
+        println("No system Java compiler available (running on a JRE?)")
+        return
+    }
+    printValue("Name", compiler.name())
+    printValue("Supported versions", compiler.sourceVersions)
+}
+
+/**
+ * Prints the Java Debug Interface (JDI) version and the VM version of a debuggee launched via the default connector.
+ * Requires the `jdk.jdi` module.
+ */
+fun printJdiInformation() {
+    printSectionHeader("JDI information")
+    val virtualMachineManager = try {
+        Bootstrap.virtualMachineManager()
+    } catch (e: Throwable) {
+        println("JDI not available: $e")
+        return
+    }
+    printValue("Virtual Machine Manager Major Interface Version", virtualMachineManager.majorInterfaceVersion())
+    printValue("Virtual Machine Manager Minor Interface Version", virtualMachineManager.minorInterfaceVersion())
     printDebuggerVersionByConnecting()
-    println("==================================")
-    println()
+}
+
+internal fun printDebuggerVersionByConnecting() {
+    try {
+        val launchingConnector = Bootstrap.virtualMachineManager().defaultConnector()
+        val arguments = launchingConnector.defaultArguments()
+        arguments["main"]!!.setValue("NOPE")
+        arguments["options"]!!.setValue("-cp .")
+        val vm = launchingConnector.launch(arguments)
+        printValue("VM version of debuggee", vm.version())
+        vm.exit(0)
+    } catch (ex: Exception) {
+        println("Could not determine debuggee VM version.\nException: $ex")
+    }
 }
 
 private fun printSectionHeader(title: String) {
@@ -129,7 +152,10 @@ private fun Long.formatBytes(): String {
 
 private fun Double.formatLoad() = if (this < 0) "not available ($this)" else "%.2f %%".format(this * 100)
 
-private fun printOperatingSystemInformation() {
+/**
+ * Prints operating system information ([java.lang.management.OperatingSystemMXBean]): OS, CPU load, physical/swap/virtual memory, file descriptors.
+ */
+fun printOperatingSystemInformation() {
     val os = ManagementFactory.getOperatingSystemMXBean()
     printSectionHeader("Operating system information")
     printValue("Name", os.name)
@@ -160,7 +186,10 @@ private fun MemoryUsage.toListString() = listOf(
     "max: ${max.formatBytes()}"
 ).joinToString("\n") { "  - $it" }
 
-private fun printMemoryInformation() {
+/**
+ * Prints heap and non-heap memory usage ([java.lang.management.MemoryMXBean]).
+ */
+fun printMemoryInformation() {
     val memory = ManagementFactory.getMemoryMXBean()
     printSectionHeader("Memory information")
     println("Heap memory usage:\n${memory.heapMemoryUsage.toListString()}")
@@ -169,7 +198,10 @@ private fun printMemoryInformation() {
     printValue("Objects pending finalization", memory.objectPendingFinalizationCount)
 }
 
-private fun printMemoryPoolInformation() {
+/**
+ * Prints all memory pools ([java.lang.management.MemoryPoolMXBean]) with usage, peak usage and managers.
+ */
+fun printMemoryPoolInformation() {
     printSectionHeader("Memory pool information")
     for (pool in ManagementFactory.getMemoryPoolMXBeans()) {
         println("${pool.name} (${pool.type}):")
@@ -181,7 +213,10 @@ private fun printMemoryPoolInformation() {
     }
 }
 
-private fun printGarbageCollectorInformation() {
+/**
+ * Prints the active garbage collectors ([GarbageCollectorMXBean]) with collection count and time.
+ */
+fun printGarbageCollectorInformation() {
     printSectionHeader("Garbage collector information")
     for (gc in ManagementFactory.getGarbageCollectorMXBeans()) {
         println("${gc.name}:")
@@ -192,7 +227,10 @@ private fun printGarbageCollectorInformation() {
     }
 }
 
-private fun printMemoryManagerInformation() {
+/**
+ * Prints all memory managers ([java.lang.management.MemoryManagerMXBean]) and their pools.
+ */
+fun printMemoryManagerInformation() {
     printSectionHeader("Memory manager information")
     for (manager in ManagementFactory.getMemoryManagerMXBeans()) {
         val kind = if (manager is GarbageCollectorMXBean) "garbage collector" else "memory manager"
@@ -202,7 +240,10 @@ private fun printMemoryManagerInformation() {
     }
 }
 
-private fun printThreadInformation() {
+/**
+ * Prints thread counts, deadlocks, monitoring capabilities and live threads ([java.lang.management.ThreadMXBean]).
+ */
+fun printThreadInformation() {
     val threads = ManagementFactory.getThreadMXBean()
     printSectionHeader("Thread information")
     printValue("Live threads", threads.threadCount)
@@ -228,7 +269,10 @@ private fun printThreadInformation() {
     }
 }
 
-private fun printClassLoadingInformation() {
+/**
+ * Prints class loading statistics ([java.lang.management.ClassLoadingMXBean]).
+ */
+fun printClassLoadingInformation() {
     val classLoading = ManagementFactory.getClassLoadingMXBean()
     printSectionHeader("Class loading information")
     printValue("Currently loaded classes", classLoading.loadedClassCount)
@@ -237,7 +281,10 @@ private fun printClassLoadingInformation() {
     printValue("Verbose class loading", classLoading.isVerbose)
 }
 
-private fun printJitCompilationInformation() {
+/**
+ * Prints the JIT compiler and its total compilation time ([java.lang.management.CompilationMXBean]).
+ */
+fun printJitCompilationInformation() {
     printSectionHeader("JIT compilation information")
     val compilation = ManagementFactory.getCompilationMXBean()
     if (compilation == null) {
@@ -251,7 +298,10 @@ private fun printJitCompilationInformation() {
     }
 }
 
-private fun printBufferPoolInformation() {
+/**
+ * Prints the direct and mapped buffer pools ([BufferPoolMXBean]).
+ */
+fun printBufferPoolInformation() {
     printSectionHeader("Buffer pool information")
     for (pool in ManagementFactory.getPlatformMXBeans(BufferPoolMXBean::class.java)) {
         println("${pool.name}:")
@@ -270,7 +320,10 @@ private val INTERESTING_VM_FLAGS = listOf(
     "HeapDumpOnOutOfMemoryError", "HeapDumpPath", "ExitOnOutOfMemoryError", "ThreadStackSize"
 )
 
-private fun printHotSpotVmFlags() {
+/**
+ * Prints the effective values of important HotSpot VM flags and all non-default manageable flags ([HotSpotDiagnosticMXBean]).
+ */
+fun printHotSpotVmFlags() {
     printSectionHeader("HotSpot VM flags")
     val hotSpot = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean::class.java)
     if (hotSpot == null) {
@@ -290,7 +343,10 @@ private fun printHotSpotVmFlags() {
     println(if (nonDefault.isEmpty()) "  none" else nonDefault.joinToString("\n") { "  - ${it.name} = ${it.value} (origin: ${it.origin})" })
 }
 
-private fun printFlightRecorderInformation() {
+/**
+ * Prints Java Flight Recorder availability and recordings ([FlightRecorderMXBean]).
+ */
+fun printFlightRecorderInformation() {
     printSectionHeader("Java Flight Recorder information")
     val flightRecorder = try {
         ManagementFactory.getPlatformMXBean(FlightRecorderMXBean::class.java)
@@ -309,7 +365,10 @@ private fun printFlightRecorderInformation() {
     )
 }
 
-private fun printRuntimeResourceInformation() {
+/**
+ * Prints the parsed [Runtime.version] and the container-aware processor count and memory limits of [Runtime].
+ */
+fun printRuntimeResourceInformation() {
     val runtime = Runtime.getRuntime()
     val version = Runtime.version()
     printSectionHeader("Runtime version and resources")
@@ -325,7 +384,10 @@ private fun printRuntimeResourceInformation() {
     printValue("Free memory", runtime.freeMemory().formatBytes())
 }
 
-private fun printProcessInformation() {
+/**
+ * Prints information about the current process ([ProcessHandle]).
+ */
+fun printProcessInformation() {
     val process = ProcessHandle.current()
     val info = process.info()
     printSectionHeader("Process information")
@@ -339,7 +401,10 @@ private fun printProcessInformation() {
     printValue("Child processes", process.children().count())
 }
 
-private fun printLocalizationInformation() {
+/**
+ * Prints the default charset, encodings, locales, time zone and line separator.
+ */
+fun printLocalizationInformation() {
     printSectionHeader("Locale, charset and time zone information")
     printValue("Default charset", Charset.defaultCharset())
     printValue("file.encoding", System.getProperty("file.encoding"))
@@ -353,7 +418,10 @@ private fun printLocalizationInformation() {
     printValue("Line separator", System.lineSeparator().map { "\\u%04X".format(it.code) }.joinToString(""))
 }
 
-private fun printModuleInformation() {
+/**
+ * Prints the modules resolved in the boot layer ([ModuleLayer.boot]).
+ */
+fun printModuleInformation() {
     printSectionHeader("Module information")
     val modules = ModuleLayer.boot().modules().sortedBy { it.name }
     println("Boot layer modules (${modules.size}):")
@@ -364,7 +432,10 @@ private fun printModuleInformation() {
 
 private val SECRET_ENV_NAME = Regex("(?i)(TOKEN|SECRET|PASSWORD|PASSWD|PWD_|CREDENTIAL|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|AUTH)")
 
-private fun printEnvironmentInformation() {
+/**
+ * Prints all environment variables, with `PATH` split into entries and secret-looking values masked.
+ */
+fun printEnvironmentInformation() {
     printSectionHeader("Environment variables")
     val environment = System.getenv().toSortedMap()
     println(environment.entries.joinToString("\n") { (name, value) ->
