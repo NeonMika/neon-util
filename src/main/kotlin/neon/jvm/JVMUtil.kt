@@ -67,6 +67,7 @@ fun printJavaInformation() {
     printOperatingSystemInformation()
     printMemoryInformation()
     printMemoryPoolInformation()
+    printGarbageCollectorInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -156,5 +157,16 @@ private fun printMemoryPoolInformation() {
         println(pool.usage?.toListString()?.prependIndent("  ") ?: "    not available (pool invalid)")
         println("  Peak usage:")
         println(pool.peakUsage?.toListString()?.prependIndent("  ") ?: "    not available (pool invalid)")
+    }
+}
+
+private fun printGarbageCollectorInformation() {
+    printSectionHeader("Garbage collector information")
+    for (gc in ManagementFactory.getGarbageCollectorMXBeans()) {
+        println("${gc.name}:")
+        println("  Valid: ${gc.isValid}")
+        println("  Collection count: ${gc.collectionCount}")
+        println("  Collection time: ${if (gc.collectionTime < 0) "not available" else Duration.ofMillis(gc.collectionTime)}")
+        println("  Memory pools: ${gc.memoryPoolNames.joinToString(", ")}")
     }
 }
