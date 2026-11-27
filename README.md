@@ -75,6 +75,19 @@ Replace the version placeholder with a release tag (e.g. `v0.0.5`), a commit has
 
 ## Usage
 
+### As a standalone jar
+
+The jar is executable. Build it and run it with the JVM you want to inspect:
+
+```shell
+./gradlew build
+java -jar build/libs/neon-util-<version>.jar
+```
+
+`build/libs` contains the jar together with its runtime dependencies (`kotlin-stdlib`, `annotations`), which are referenced via the
+manifest's `Class-Path`. To use it elsewhere, copy the whole `build/libs` folder, e.g. onto a server or into a container, and run
+`java -jar` there.
+
 ### From Kotlin
 
 ```kotlin
@@ -172,10 +185,12 @@ The project uses the Gradle wrapper. You don't need a local Gradle installation.
 [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains) downloads one automatically.
 
 ```shell
-./gradlew build                # compile, test and package (incl. sources and javadoc jars)
+./gradlew build                # compile, test and package (incl. sources and javadoc jars, plus runtime libraries in build/libs)
 ./gradlew test                 # run the tests
 ./gradlew publishToMavenLocal  # install into ~/.m2 for local use
 ```
+
+The build prints which Java is used to run Gradle, to compile and to test, since these can differ.
 
 Gradle does not show the test output (the JVM report) on the console. You find it in the HTML test report at
 `build/reports/tests/test/index.html`. Alternatively, run `./gradlew test --info`.

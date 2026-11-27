@@ -3,6 +3,9 @@ plugins {
     id 'maven-publish'
 }
 
+// Java used to run Gradle itself (configuration and task execution), which can differ from the toolchain used to build and test
+println("Java used for Gradle (configuration): ${System.getProperty('java.version')} (${System.getProperty('java.vendor')}), java.home = ${System.getProperty('java.home')}")
+
 group = 'neon'
 version = '0.0.6'
 
@@ -30,6 +33,7 @@ jar {
         attributes(
                 'Implementation-Version': project.version,
                 'Version': project.version,
+                'Main-Class': 'neon.jvm.MainKt',
                 // Lets the jar be run directly (java -cp neon-util.jar ...) with its dependencies placed next to it
                 'Class-Path': runtimeClasspath.elements.map { files -> files.collect { it.asFile.name }.join(' ') }
         )
@@ -44,6 +48,22 @@ tasks.register('copyRuntimeLibrariesToLib', Copy) {
 
 tasks.named('assemble') {
     dependsOn 'copyRuntimeLibrariesToLib'
+}
+
+// Prints the toolchain JDK used for compiling and testing
+def printJavaInstallation(String purpose, JavaInstallationMetadata metadata) {
+    println("Java used for $purpose: ${metadata.languageVersion}, ${metadata.jvmVersion}, ${metadata.javaRuntimeVersion}, ${metadata.vendor}")
+    println("Java used for $purpose (installation path): ${metadata.installationPath}")
+}
+
+tasks.named('compileKotlin') {
+    def compiler = javaToolchains.compilerFor(java.toolchain)
+    doFirst { printJavaInstallation('compiling', compiler.get().metadata) }
+}
+
+tasks.named('test') {
+    def launcher = javaLauncher
+    doFirst { printJavaInstallation('testing', launcher.get().metadata) }
 }
 
 publishing {
