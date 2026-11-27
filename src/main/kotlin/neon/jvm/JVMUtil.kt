@@ -88,6 +88,7 @@ fun printJavaInformation() {
     printProcessInformation()
     printLocalizationInformation()
     printModuleInformation()
+    printEnvironmentInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -358,5 +359,19 @@ private fun printModuleInformation() {
     println("Boot layer modules (${modules.size}):")
     println(modules.joinToString("\n") { module ->
         "  - ${module.name}${module.descriptor?.rawVersion()?.map { "@$it" }?.orElse("") ?: ""}"
+    })
+}
+
+private val SECRET_ENV_NAME = Regex("(?i)(TOKEN|SECRET|PASSWORD|PASSWD|PWD_|CREDENTIAL|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|AUTH)")
+
+private fun printEnvironmentInformation() {
+    printSectionHeader("Environment variables")
+    val environment = System.getenv().toSortedMap()
+    println(environment.entries.joinToString("\n") { (name, value) ->
+        if (name.equals("PATH", ignoreCase = true)) {
+            "  - $name:\n" + value.split(File.pathSeparator).filter { it.isNotEmpty() }.joinToString("\n") { "      $it" }
+        } else {
+            "  - $name=${if (SECRET_ENV_NAME.containsMatchIn(name)) "****** (masked)" else value}"
+        }
     })
 }
