@@ -11,6 +11,7 @@ import java.lang.management.MemoryUsage
 import java.time.Duration
 import java.time.Instant
 import javax.tools.ToolProvider
+import jdk.management.jfr.FlightRecorderMXBean
 
 internal fun printDebuggerVersionByConnecting() {
     try {
@@ -78,6 +79,7 @@ fun printJavaInformation() {
     printJitCompilationInformation()
     printBufferPoolInformation()
     printHotSpotVmFlags()
+    printFlightRecorderInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -277,4 +279,23 @@ private fun printHotSpotVmFlags() {
     val nonDefault = hotSpot.diagnosticOptions.filter { it.origin != VMOption.Origin.DEFAULT }
     println("Non-default writeable (manageable) flags:")
     println(if (nonDefault.isEmpty()) "  none" else nonDefault.joinToString("\n") { "  - ${it.name} = ${it.value} (origin: ${it.origin})" })
+}
+
+private fun printFlightRecorderInformation() {
+    printSectionHeader("Java Flight Recorder information")
+    val flightRecorder = try {
+        ManagementFactory.getPlatformMXBean(FlightRecorderMXBean::class.java)
+    } catch (_: Throwable) {
+        null // jdk.management.jfr module not present or JFR not supported
+    }
+    if (flightRecorder == null) {
+        println("Java Flight Recorder not available")
+        return
+    }
+    val recordings = flightRecorder.recordings
+    println("Recordings:")
+    println(
+        if (recordings.isEmpty()) "  none"
+        else recordings.joinToString("\n") { "  - [${it.id}] ${it.name} (state: ${it.state}, destination: ${it.destination ?: "-"})" }
+    )
 }
