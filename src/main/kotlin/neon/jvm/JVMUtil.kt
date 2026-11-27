@@ -80,6 +80,7 @@ fun printJavaInformation() {
     printBufferPoolInformation()
     printHotSpotVmFlags()
     printFlightRecorderInformation()
+    printRuntimeResourceInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -298,4 +299,20 @@ private fun printFlightRecorderInformation() {
         if (recordings.isEmpty()) "  none"
         else recordings.joinToString("\n") { "  - [${it.id}] ${it.name} (state: ${it.state}, destination: ${it.destination ?: "-"})" }
     )
+}
+
+private fun printRuntimeResourceInformation() {
+    val runtime = Runtime.getRuntime()
+    val version = Runtime.version()
+    printSectionHeader("Runtime version and resources")
+    printValue("Version", version)
+    printValue("Feature / interim / update / patch", "${version.feature()} / ${version.interim()} / ${version.update()} / ${version.patch()}")
+    printValue("Pre-release", version.pre().orElse("-"))
+    printValue("Build", version.build().map { it.toString() }.orElse("-"))
+    printValue("Optional", version.optional().orElse("-"))
+    println()
+    printValue("Available processors (as seen by the JVM, container-aware)", runtime.availableProcessors())
+    printValue("Max memory", runtime.maxMemory().let { if (it == Long.MAX_VALUE) "unlimited" else it.formatBytes() })
+    printValue("Total memory", runtime.totalMemory().formatBytes())
+    printValue("Free memory", runtime.freeMemory().formatBytes())
 }
