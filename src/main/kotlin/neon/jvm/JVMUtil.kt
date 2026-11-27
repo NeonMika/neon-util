@@ -87,6 +87,7 @@ fun printJavaInformation() {
     printRuntimeResourceInformation()
     printProcessInformation()
     printLocalizationInformation()
+    printModuleInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -349,4 +350,13 @@ private fun printLocalizationInformation() {
     printValue("Default locale (format)", Locale.getDefault(Locale.Category.FORMAT))
     printValue("Default time zone", ZoneId.systemDefault())
     printValue("Line separator", System.lineSeparator().map { "\\u%04X".format(it.code) }.joinToString(""))
+}
+
+private fun printModuleInformation() {
+    printSectionHeader("Module information")
+    val modules = ModuleLayer.boot().modules().sortedBy { it.name }
+    println("Boot layer modules (${modules.size}):")
+    println(modules.joinToString("\n") { module ->
+        "  - ${module.name}${module.descriptor?.rawVersion()?.map { "@$it" }?.orElse("") ?: ""}"
+    })
 }
