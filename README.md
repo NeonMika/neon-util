@@ -199,6 +199,16 @@ On every push and every published release, CI runs the tests on Linux, Windows a
 [`.github/workflows/test.yml`](.github/workflows/test.yml)). The test reports of each platform are uploaded as workflow
 artifacts.
 
+After every published release, the [Test JitPack](.github/workflows/jitpack.yml) workflow checks that the release can actually
+be used from JitPack. A minimal Gradle consumer project ([`jitpack-test/`](jitpack-test)) declares a dependency on the new
+version and runs code from it. JitPack builds new versions on their first request, so the check retries once a minute, up to
+10 attempts. It can also be started manually for any tag or commit:
+
+```shell
+gh workflow run jitpack.yml -f version=v0.0.7
+./gradlew -p jitpack-test run -PneonUtilVersion=v0.0.7   # the same check, locally
+```
+
 ## License
 
 [GNU Lesser General Public License v2.1](LICENSE)
