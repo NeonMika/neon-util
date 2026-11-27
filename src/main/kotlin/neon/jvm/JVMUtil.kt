@@ -70,6 +70,7 @@ fun printJavaInformation() {
     printMemoryPoolInformation()
     printGarbageCollectorInformation()
     printMemoryManagerInformation()
+    printThreadInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -180,5 +181,31 @@ private fun printMemoryManagerInformation() {
         println("${manager.name} ($kind):")
         println("  Valid: ${manager.isValid}")
         println("  Memory pools: ${manager.memoryPoolNames.joinToString(", ")}")
+    }
+}
+
+private fun printThreadInformation() {
+    val threads = ManagementFactory.getThreadMXBean()
+    printSectionHeader("Thread information")
+    printValue("Live threads", threads.threadCount)
+    printValue("Daemon threads", threads.daemonThreadCount)
+    printValue("Peak threads", threads.peakThreadCount)
+    printValue("Total started threads", threads.totalStartedThreadCount)
+    val deadlocked = threads.findDeadlockedThreads()
+    printValue("Deadlocked threads", deadlocked?.let { ids -> threads.getThreadInfo(ids).joinToString(", ") { it?.threadName ?: "?" } } ?: "none")
+    println()
+    printValue("Thread CPU time supported", threads.isThreadCpuTimeSupported)
+    printValue("Current thread CPU time supported", threads.isCurrentThreadCpuTimeSupported)
+    printValue("Thread CPU time enabled", if (threads.isThreadCpuTimeSupported) threads.isThreadCpuTimeEnabled else "n/a")
+    printValue("Thread contention monitoring supported", threads.isThreadContentionMonitoringSupported)
+    printValue("Thread contention monitoring enabled", if (threads.isThreadContentionMonitoringSupported) threads.isThreadContentionMonitoringEnabled else "n/a")
+    printValue("Object monitor usage supported", threads.isObjectMonitorUsageSupported)
+    printValue("Synchronizer usage supported", threads.isSynchronizerUsageSupported)
+    if (threads is com.sun.management.ThreadMXBean && threads.isThreadAllocatedMemorySupported) {
+        printValue("Total allocated memory (all live threads)", threads.totalThreadAllocatedBytes.formatBytes())
+    }
+    println("Threads:")
+    for (info in threads.getThreadInfo(threads.allThreadIds).filterNotNull().sortedBy { it.threadId }) {
+        println("  - [${info.threadId}] ${info.threadName} (${info.threadState}${if (info.isDaemon) ", daemon" else ""})")
     }
 }
