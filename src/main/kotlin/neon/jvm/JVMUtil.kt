@@ -8,8 +8,11 @@ import java.lang.management.BufferPoolMXBean
 import java.lang.management.GarbageCollectorMXBean
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryUsage
+import java.nio.charset.Charset
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
+import java.util.Locale
 import javax.tools.ToolProvider
 import jdk.management.jfr.FlightRecorderMXBean
 
@@ -83,6 +86,7 @@ fun printJavaInformation() {
     printFlightRecorderInformation()
     printRuntimeResourceInformation()
     printProcessInformation()
+    printLocalizationInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -331,4 +335,18 @@ private fun printProcessInformation() {
     printValue("Start instant", info.startInstant().map { it.toString() }.orElse("unknown"))
     printValue("Total CPU duration", info.totalCpuDuration().map { it.toString() }.orElse("unknown"))
     printValue("Child processes", process.children().count())
+}
+
+private fun printLocalizationInformation() {
+    printSectionHeader("Locale, charset and time zone information")
+    printValue("Default charset", Charset.defaultCharset())
+    printValue("file.encoding", System.getProperty("file.encoding"))
+    printValue("native.encoding", System.getProperty("native.encoding"))
+    printValue("stdout.encoding", System.getProperty("stdout.encoding"))
+    printValue("sun.jnu.encoding (file names)", System.getProperty("sun.jnu.encoding"))
+    printValue("Default locale", Locale.getDefault())
+    printValue("Default locale (display)", Locale.getDefault(Locale.Category.DISPLAY))
+    printValue("Default locale (format)", Locale.getDefault(Locale.Category.FORMAT))
+    printValue("Default time zone", ZoneId.systemDefault())
+    printValue("Line separator", System.lineSeparator().map { "\\u%04X".format(it.code) }.joinToString(""))
 }
