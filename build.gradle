@@ -2,7 +2,7 @@ import org.gradle.internal.jvm.Jvm
 
 plugins {
     id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.7.10'
+    id 'org.jetbrains.kotlin.jvm' version '2.4.21'
     id 'maven-publish'
 }
 
@@ -12,8 +12,8 @@ println("Java used for Gradle configuration (Jvm.current()): " + configurationJv
 def configurationJavaHome = System.getProperty('java.home')
 println("java.home during Gradle configuration: " + configurationJavaHome)
 
-version '0.0.5'
-group 'neon'
+version = '0.0.6'
+group = 'neon'
 
 repositories {
     mavenCentral()
@@ -21,7 +21,7 @@ repositories {
 
 dependencies {
     // # JUnit
-    testImplementation group: 'junit', name: 'junit', version: '4.13.1'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 // This is executed on all subprojects
@@ -43,20 +43,22 @@ allprojects {
         // tasks as well."
         java { // This should work too, but we follow the example given in the link
             toolchain {
-                languageVersion = JavaLanguageVersion.of(10)
+                languageVersion = JavaLanguageVersion.of(25)
             }
             withSourcesJar()
             withJavadocJar()
         }
         
         tasks.register('copyRuntimeLibrariesToLib', Copy) {
+            def runtimeClasspath = project.configurations.runtimeClasspath
+            def libsDir = layout.buildDirectory.dir("libs")
             doFirst {
                 println "copyRuntimeClasspathToLib:"
                 println "copy project.configurations.runtimeClasspath.files -> buildDir\\libs"
-                println "[${project.configurations.runtimeClasspath.files.collect { it.getName() }.join(', ')}] -> $buildDir\\libs"
+                println "[${runtimeClasspath.files.collect { it.getName() }.join(', ')}] -> ${libsDir.get().asFile}"
             }
-            into "$buildDir/libs"
-            from project.configurations.runtimeClasspath
+            into libsDir
+            from runtimeClasspath
             exclude "tools.jar"
         }
 
@@ -72,14 +74,15 @@ allprojects {
         }
 
         tasks.register('jarSettings') {
+            def projectVersion = project.version
             doFirst {
                 println("Class-Path: " + configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '))
-                println("Version: " + project.version)
+                println("Version: " + projectVersion)
                 jar {
                     manifest {
                         attributes(
                                 'Class-Path': configurations.runtimeClasspath.files.toSet().collect { it.getName() }.join(' '),
-                                'Version': project.version
+                                'Version': projectVersion
                         )
                     }
                 }
