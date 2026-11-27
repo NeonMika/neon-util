@@ -72,6 +72,7 @@ fun printJavaInformation() {
     printMemoryManagerInformation()
     printThreadInformation()
     printClassLoadingInformation()
+    printJitCompilationInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -218,4 +219,18 @@ private fun printClassLoadingInformation() {
     printValue("Total loaded classes", classLoading.totalLoadedClassCount)
     printValue("Unloaded classes", classLoading.unloadedClassCount)
     printValue("Verbose class loading", classLoading.isVerbose)
+}
+
+private fun printJitCompilationInformation() {
+    printSectionHeader("JIT compilation information")
+    val compilation = ManagementFactory.getCompilationMXBean()
+    if (compilation == null) {
+        println("No JIT compiler available")
+        return
+    }
+    printValue("Name", compilation.name)
+    printValue("Compilation time monitoring supported", compilation.isCompilationTimeMonitoringSupported)
+    if (compilation.isCompilationTimeMonitoringSupported) {
+        printValue("Total compilation time", Duration.ofMillis(compilation.totalCompilationTime))
+    }
 }
