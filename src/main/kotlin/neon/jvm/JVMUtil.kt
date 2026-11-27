@@ -66,6 +66,7 @@ fun printJavaInformation() {
     println("VM version:\n  ${runtime.vmVersion}")
     printOperatingSystemInformation()
     printMemoryInformation()
+    printMemoryPoolInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -144,4 +145,16 @@ private fun printMemoryInformation() {
     println("Non-heap memory usage:\n${memory.nonHeapMemoryUsage.toListString()}")
     @Suppress("DEPRECATION")
     printValue("Objects pending finalization", memory.objectPendingFinalizationCount)
+}
+
+private fun printMemoryPoolInformation() {
+    printSectionHeader("Memory pool information")
+    for (pool in ManagementFactory.getMemoryPoolMXBeans()) {
+        println("${pool.name} (${pool.type}):")
+        println("  Managed by: ${pool.memoryManagerNames.joinToString(", ")}")
+        println("  Usage:")
+        println(pool.usage?.toListString()?.prependIndent("  ") ?: "    not available (pool invalid)")
+        println("  Peak usage:")
+        println(pool.peakUsage?.toListString()?.prependIndent("  ") ?: "    not available (pool invalid)")
+    }
 }
