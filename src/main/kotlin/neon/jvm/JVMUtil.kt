@@ -2,6 +2,7 @@ package neon.jvm
 
 import com.sun.jdi.Bootstrap
 import java.io.File
+import java.lang.management.GarbageCollectorMXBean
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryUsage
 import java.time.Duration
@@ -68,6 +69,7 @@ fun printJavaInformation() {
     printMemoryInformation()
     printMemoryPoolInformation()
     printGarbageCollectorInformation()
+    printMemoryManagerInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -168,5 +170,15 @@ private fun printGarbageCollectorInformation() {
         println("  Collection count: ${gc.collectionCount}")
         println("  Collection time: ${if (gc.collectionTime < 0) "not available" else Duration.ofMillis(gc.collectionTime)}")
         println("  Memory pools: ${gc.memoryPoolNames.joinToString(", ")}")
+    }
+}
+
+private fun printMemoryManagerInformation() {
+    printSectionHeader("Memory manager information")
+    for (manager in ManagementFactory.getMemoryManagerMXBeans()) {
+        val kind = if (manager is GarbageCollectorMXBean) "garbage collector" else "memory manager"
+        println("${manager.name} ($kind):")
+        println("  Valid: ${manager.isValid}")
+        println("  Memory pools: ${manager.memoryPoolNames.joinToString(", ")}")
     }
 }
