@@ -18,8 +18,12 @@ import jdk.management.jfr.FlightRecorderMXBean
 
 /**
  * Prints all available information about the running JVM, i.e., all sections below in this order.
+ *
+ * @param printEnvironment whether to include the environment variables ([printEnvironmentInformation]). Off by default, since
+ * environment variables often contain sensitive values that should not end up in logs, even though secret-looking ones are masked.
  */
-fun printFullJavaInformation() {
+@JvmOverloads
+fun printFullJavaInformation(printEnvironment: Boolean = false) {
     println()
     println("|==================================|")
     println("|======== JAVA INFORMATION ========|")
@@ -40,7 +44,9 @@ fun printFullJavaInformation() {
     printProcessInformation()
     printLocalizationInformation()
     printModuleInformation()
-    printEnvironmentInformation()
+    if (printEnvironment) {
+        printEnvironmentInformation()
+    }
     printJavaCompilerInformation()
     printJdiInformation()
     println("==================================")

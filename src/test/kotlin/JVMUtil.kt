@@ -48,12 +48,30 @@ class JVMUtil {
         "JDI information" to ::printJdiInformation,
     )
 
+    /** Runs [printFullJavaInformation] and returns its output with normalized line endings (println uses System.lineSeparator()). */
+    private fun captureFullJavaInformation(printEnvironment: Boolean) =
+        captureOutput { printFullJavaInformation(printEnvironment) }.replace(System.lineSeparator(), "\n")
+
     @Test
-    fun fullJavaInformationContainsAllSectionsInOrder() {
-        // Normalize Windows line endings (println uses System.lineSeparator())
+    fun fullJavaInformationWithEnvironmentContainsAllSectionsInOrder() =
+        assertSectionsInOrder(captureFullJavaInformation(printEnvironment = true), sections.map { it.first })
+
+    @Test
+    fun fullJavaInformationWithoutEnvironmentContainsAllOtherSectionsInOrder() {
+        val output = captureFullJavaInformation(printEnvironment = false)
+        assertSectionsInOrder(output, sections.map { it.first }.filter { it != "Environment variables" })
+        assertTrue("Environment variables must not be printed by default", !output.contains("\nEnvironment variables:\n"))
+    }
+
+    @Test
+    fun fullJavaInformationDoesNotPrintEnvironmentByDefault() {
         val output = captureOutput { printFullJavaInformation() }.replace(System.lineSeparator(), "\n")
+        assertTrue("Environment variables must not be printed by default", !output.contains("\nEnvironment variables:\n"))
+    }
+
+    private fun assertSectionsInOrder(output: String, titles: List<String>) {
         var lastIndex = -1
-        for ((title, _) in sections) {
+        for (title in titles) {
             val index = output.indexOf("\n$title:\n")
             assertTrue("Expected section '$title' in full output", index >= 0)
             assertTrue("Expected section '$title' after the previous section", index > lastIndex)
