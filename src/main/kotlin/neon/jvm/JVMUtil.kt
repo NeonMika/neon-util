@@ -2,6 +2,8 @@ package neon.jvm
 
 import com.sun.jdi.Bootstrap
 import java.lang.management.ManagementFactory
+import java.time.Duration
+import java.time.Instant
 import javax.tools.ToolProvider
 
 internal fun printDebuggerVersionByConnecting() {
@@ -39,7 +41,7 @@ fun printJavaInformation() {
     println("Input arguments:\n${runtime.inputArguments.joinToListString()}")
     println("System properties:\n${runtime.systemProperties.entries.joinToListString()}")
     println()
-    // println("pid: ${runtime.pid}") // since Java 10
+    println("PID:\n  ${runtime.pid}")
     println("Classpath:\n${runtime.classPath.splitPaths().joinToListString()}")
     println("Library path:\n${runtime.libraryPath.splitPaths().joinToListString()}")
     println("isBootClassPathSupported:\n  ${runtime.isBootClassPathSupported}")
@@ -54,8 +56,8 @@ fun printJavaInformation() {
     println("Spec Version:\n  ${runtime.specVersion}")
     println("Management Spec Version:\n  ${runtime.managementSpecVersion}")
     println()
-    println("Start time:\n  ${runtime.startTime}")
-    println("Uptime:\n  ${runtime.uptime}")
+    println("Start time:\n  ${Instant.ofEpochMilli(runtime.startTime)} (${runtime.startTime} ms since epoch)")
+    println("Uptime:\n  ${Duration.ofMillis(runtime.uptime)} (${runtime.uptime} ms)")
     println()
     println("VM Name:\n  ${runtime.vmName}")
     println("VM vendor:\n  ${runtime.vmVendor}")
