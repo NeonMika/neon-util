@@ -81,6 +81,7 @@ fun printJavaInformation() {
     printHotSpotVmFlags()
     printFlightRecorderInformation()
     printRuntimeResourceInformation()
+    printProcessInformation()
     println("==================================")
     println("Java compiler information:")
     println()
@@ -315,4 +316,18 @@ private fun printRuntimeResourceInformation() {
     printValue("Max memory", runtime.maxMemory().let { if (it == Long.MAX_VALUE) "unlimited" else it.formatBytes() })
     printValue("Total memory", runtime.totalMemory().formatBytes())
     printValue("Free memory", runtime.freeMemory().formatBytes())
+}
+
+private fun printProcessInformation() {
+    val process = ProcessHandle.current()
+    val info = process.info()
+    printSectionHeader("Process information")
+    printValue("PID", process.pid())
+    printValue("Parent PID", process.parent().map { it.pid().toString() }.orElse("unknown"))
+    printValue("User", info.user().orElse("unknown"))
+    printValue("Executable", info.command().orElse("unknown"))
+    printValue("Command line", info.commandLine().orElse("unknown"))
+    printValue("Start instant", info.startInstant().map { it.toString() }.orElse("unknown"))
+    printValue("Total CPU duration", info.totalCpuDuration().map { it.toString() }.orElse("unknown"))
+    printValue("Child processes", process.children().count())
 }
